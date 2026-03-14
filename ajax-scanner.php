@@ -25,7 +25,7 @@ $args=[
 $query=new WP_Query($args);
 
 $images=[];
-$total=0;
+$total_images=0;
 
 foreach($query->posts as $post){
 
@@ -33,15 +33,20 @@ $urls=bis_extract_images($post->post_content);
 
 foreach($urls as $url){
 
-$total++;
+$total_images++;
 
 $response=wp_remote_head($url,['timeout'=>10]);
 
 if(is_wp_error($response)){
 
 $status="timeout";
+$code="Timeout";
 
-}elseif(wp_remote_retrieve_response_code($response)>=400){
+}else{
+
+$code=wp_remote_retrieve_response_code($response);
+
+if($code>=400){
 
 $status="broken";
 
@@ -51,10 +56,18 @@ $status="ok";
 
 }
 
+}
+
 $images[]=[
-'post'=>$post->post_title,
-'url'=>$url,
-'status'=>$status
+
+'post_id'=>$post->ID,
+'post_title'=>$post->post_title,
+'post_url'=>get_permalink($post->ID),
+'image_url'=>$url,
+'http_status'=>$code,
+'error_type'=>$status,
+'domain'=>parse_url($url,PHP_URL_HOST)
+
 ];
 
 }
@@ -63,7 +76,8 @@ $images[]=[
 
 wp_send_json([
 'images'=>$images,
-'count'=>$query->post_count
+'count'=>$query->post_count,
+'total_images'=>$total_images
 ]);
 
 }

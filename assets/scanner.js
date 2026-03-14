@@ -1,11 +1,13 @@
 jQuery(document).ready(function($){
 
 let offset=0
-let totalPosts=0
+let allImages=[]
+let totalImages=0
 
 $("#bis_start_scan").click(function(){
 
 offset=0
+allImages=[]
 scanBatch()
 
 })
@@ -23,15 +25,33 @@ month:$("#bis_month").val()
 
 offset+=20
 
+totalImages+=res.total_images
+
+res.images.forEach(function(img){
+
+allImages.push(img)
+
+})
+
 let progress=Math.round((offset/500)*100)
 
 $("#bis_progress").text(progress+"%")
 
-$("#bis_stats").append(
-"Images checked: "+res.images.length+"<br>"
+$("#bis_stats").html(
+
+"Images scanned: "+allImages.length
+
 )
 
+if(res.count>0){
+
 scanBatch()
+
+}else{
+
+$("#bis_progress").text("Scan complete")
+
+}
 
 })
 

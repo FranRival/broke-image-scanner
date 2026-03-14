@@ -12,22 +12,37 @@ function bis_admin_page(){
 
 <label>Year</label>
 <select id="bis_year">
+
 <?php
+
 $current = date("Y");
+
 for($y=$current;$y>=2018;$y--){
+
 echo "<option value='$y'>$y</option>";
+
 }
+
 ?>
+
 </select>
 
 <label>Month</label>
+
 <select id="bis_month">
+
 <option value="">All</option>
+
 <?php
+
 for($m=1;$m<=12;$m++){
+
 echo "<option value='$m'>$m</option>";
+
 }
+
 ?>
+
 </select>
 
 <button id="bis_start_scan" class="button button-primary">
@@ -47,4 +62,5 @@ Start Scan
 </div>
 
 <?php
+
 }

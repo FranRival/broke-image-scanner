@@ -1,6 +1,7 @@
 <?php
 /*
 Plugin Name: Broken Image Scanner
+Description: Scan posts by month/year to detect broken or timeout images and export Excel reports.
 Version: 2.0
 */
 
@@ -18,30 +19,32 @@ add_action('admin_menu','bis_menu');
 
 function bis_menu(){
 
-    add_menu_page(
-        'Broken Image Scanner',
-        'Broken Image Scanner',
-        'manage_options',
-        'broken-image-scanner',
-        'bis_admin_page',
-        'dashicons-search',
-        80
-    );
+add_menu_page(
+'Broken Image Scanner',
+'Broken Image Scanner',
+'manage_options',
+'broken-image-scanner',
+'bis_admin_page',
+'dashicons-search',
+80
+);
+
 }
 
 add_action('admin_enqueue_scripts','bis_scripts');
 
 function bis_scripts(){
 
-    wp_enqueue_script(
-        'bis-scanner',
-        BIS_URL.'assets/scanner.js',
-        ['jquery'],
-        null,
-        true
-    );
+wp_enqueue_script(
+'bis-scanner',
+BIS_URL.'assets/scanner.js',
+['jquery'],
+null,
+true
+);
 
-    wp_localize_script('bis-scanner','bis_ajax',[
-        'ajax_url'=>admin_url('admin-ajax.php')
-    ]);
+wp_localize_script('bis-scanner','bis_ajax',[
+'ajax_url'=>admin_url('admin-ajax.php')
+]);
+
 }

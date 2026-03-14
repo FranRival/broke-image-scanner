@@ -13,6 +13,10 @@
 - cálculo de porcentaje de error
 - separación Broken vs Timeout
 
+#### V2.1
+- Agregamos al excel Post ID
+- Agregamos URL
+
 
 
 ### NUEVOS PROBLEMAS DETECTADOS
