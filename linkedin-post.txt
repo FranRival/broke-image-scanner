@@ -1,0 +1,34 @@
+
+NECESITAMOS IMPLEMENTAR EL CODIGO DE GOOGLE analitycs
+Problema: es que es un script pesado. 
+Hemos hecho una insfraestructura preparada para competir por los Core Web Vitals mas altos. 
+Un script puede romper la velocidad
+Haciendo que se forme una bola de nieve, pocos perdidos hoy signifcan menos manana.
+
+No podemos simplemente implementar el script de analitycs.
+Pero lo necesitamos.
+
+Soluciones: colocar el script con un async.
+Aun asi, habria problemas.
+
+No del script. 
+
+Si no otro problema. Es que no sabemos donde estamos con respecto a la calidad de la Web. 
+
+Es una web de 60k de trafico al mes. Con mas de 40k post image. 
+
+Es una biblioteca de imagenes.
+
+*** Cuantas imagenes estan caidas
+***Cuantas regresan 404
+*** cuantas URL solo cargan el header y lo demas aprece: This critical error on this website (exclusivamente en ciertas URL)
+*** no funcionan las soluciones como:
+-- 
+-- 
+-- 
+
+Son de pago.
+
+Necesitamos un plugin de uso industrial, ADAPTADO para este tipo de webs. 
+
+La solucion: este plugin.
