@@ -6,8 +6,15 @@ function bis_generate_reports($images,$total){
 
 $broken=[];
 $timeout=[];
+$domains=[];
 
 foreach($images as $img){
+
+if(!isset($domains[$img['domain']])){
+$domains[$img['domain']]=0;
+}
+
+$domains[$img['domain']]++;
 
 if($img['error_type']=="broken"){
 
@@ -27,6 +34,7 @@ $timeout[]=$img;
 
 bis_export_csv('broken-images-report.csv',$broken);
 bis_export_csv('timeout-images-report.csv',$timeout);
+bis_export_domains('domains-report.csv',$domains);
 
 }
 
@@ -59,6 +67,32 @@ $row['http_status'],
 $row['error_type'],
 $row['domain'],
 $row['percentage']
+
+]);
+
+}
+
+fclose($file);
+
+}
+
+function bis_export_domains($filename,$domains){
+
+$file=fopen(BIS_PATH.$filename,'w');
+
+fputcsv($file,[
+
+'Domain',
+'Occurrences'
+
+]);
+
+foreach($domains as $domain=>$count){
+
+fputcsv($file,[
+
+$domain,
+$count
 
 ]);
 

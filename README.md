@@ -17,6 +17,12 @@
 - Agregamos al excel Post ID
 - Agregamos URL
 
+#### V2. 3
+- Evitar escanear la misma url de imagen varias veces reduciendo los Request HTTP
+- actualmente el limite del plugin solo es de 500. Progress bar. 500 = 100%. No sabe acutalmente la cantidad dexacta de post. 
+- nos arroja un nuevo archivo excel: domain report.
+
+
 
 
 ### NUEVOS PROBLEMAS DETECTADOS

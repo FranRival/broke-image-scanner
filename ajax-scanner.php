@@ -3,6 +3,32 @@
 if (!defined('ABSPATH')) exit;
 
 add_action('wp_ajax_bis_scan_batch','bis_scan_batch');
+add_action('wp_ajax_bis_get_total_posts','bis_get_total_posts');
+
+function bis_get_total_posts(){
+
+$year=intval($_POST['year']);
+$month=$_POST['month'];
+
+$args=[
+'post_type'=>'post',
+'posts_per_page'=>-1,
+'fields'=>'ids',
+'date_query'=>[
+[
+'year'=>$year,
+'month'=>$month
+]
+]
+];
+
+$query=new WP_Query($args);
+
+wp_send_json([
+'total_posts'=>count($query->posts)
+]);
+
+}
 
 function bis_scan_batch(){
 
@@ -25,7 +51,7 @@ $args=[
 $query=new WP_Query($args);
 
 $images=[];
-$total_images=0;
+$seen_urls=[]; // deduplicación
 
 foreach($query->posts as $post){
 
@@ -33,7 +59,11 @@ $urls=bis_extract_images($post->post_content);
 
 foreach($urls as $url){
 
-$total_images++;
+if(isset($seen_urls[$url])){
+continue;
+}
+
+$seen_urls[$url]=true;
 
 $response=wp_remote_head($url,['timeout'=>10]);
 
@@ -76,8 +106,8 @@ $images[]=[
 
 wp_send_json([
 'images'=>$images,
-'count'=>$query->post_count,
-'total_images'=>$total_images
+'processed'=>$offset + $query->post_count,
+'batch_count'=>$query->post_count
 ]);
 
 }
