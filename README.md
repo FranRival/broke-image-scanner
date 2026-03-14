@@ -6,9 +6,12 @@
 
 ### V2.
 
-
-
-
+- escaneo AJAX por lotes
+- filtro por año y mes
+- barra de progreso
+- generación de 2 archivos Excel
+- cálculo de porcentaje de error
+- separación Broken vs Timeout
 
 
 

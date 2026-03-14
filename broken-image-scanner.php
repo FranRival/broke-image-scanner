@@ -1,20 +1,22 @@
 <?php
 /*
 Plugin Name: Broken Image Scanner
-Description: Scans posts for broken images.
-Version: 1.0
+Version: 2.0
 */
 
-if (!defined('ABSPATH')) {
-    exit;
-}
+if (!defined('ABSPATH')) exit;
 
-require_once plugin_dir_path(__FILE__) . 'admin-page.php';
-require_once plugin_dir_path(__FILE__) . 'scanner.php';
+define('BIS_PATH', plugin_dir_path(__FILE__));
+define('BIS_URL', plugin_dir_url(__FILE__));
 
-add_action('admin_menu', 'bis_add_menu');
+require_once BIS_PATH.'admin-page.php';
+require_once BIS_PATH.'ajax-scanner.php';
+require_once BIS_PATH.'parser.php';
+require_once BIS_PATH.'exporter.php';
 
-function bis_add_menu() {
+add_action('admin_menu','bis_menu');
+
+function bis_menu(){
 
     add_menu_page(
         'Broken Image Scanner',
@@ -22,7 +24,24 @@ function bis_add_menu() {
         'manage_options',
         'broken-image-scanner',
         'bis_admin_page',
-        'dashicons-format-image',
+        'dashicons-search',
         80
     );
+}
+
+add_action('admin_enqueue_scripts','bis_scripts');
+
+function bis_scripts(){
+
+    wp_enqueue_script(
+        'bis-scanner',
+        BIS_URL.'assets/scanner.js',
+        ['jquery'],
+        null,
+        true
+    );
+
+    wp_localize_script('bis-scanner','bis_ajax',[
+        'ajax_url'=>admin_url('admin-ajax.php')
+    ]);
 }

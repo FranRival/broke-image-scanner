@@ -1,46 +1,50 @@
 <?php
 
-if (!defined('ABSPATH')) {
-    exit;
+if (!defined('ABSPATH')) exit;
+
+function bis_admin_page(){
+
+?>
+
+<div class="wrap">
+
+<h1>Broken Image Scanner</h1>
+
+<label>Year</label>
+<select id="bis_year">
+<?php
+$current = date("Y");
+for($y=$current;$y>=2018;$y--){
+echo "<option value='$y'>$y</option>";
 }
+?>
+</select>
 
-function bis_admin_page() {
+<label>Month</label>
+<select id="bis_month">
+<option value="">All</option>
+<?php
+for($m=1;$m<=12;$m++){
+echo "<option value='$m'>$m</option>";
+}
+?>
+</select>
 
-    echo '<div class="wrap">';
-    echo '<h1>Broken Image Scanner</h1>';
+<button id="bis_start_scan" class="button button-primary">
+Start Scan
+</button>
 
-    echo '<form method="post">';
-    submit_button('Scan Images');
-    echo '</form>';
+<br><br>
 
-    if (isset($_POST['submit'])) {
+<div id="bis_progress">
+0%
+</div>
 
-        $results = bis_scan_images();
+<br>
 
-        echo '<table class="widefat striped">';
-        echo '<thead>
-        <tr>
-        <th>Post</th>
-        <th>Image URL</th>
-        <th>Status</th>
-        <th>HTTP Code</th>
-        </tr>
-        </thead>';
+<div id="bis_stats"></div>
 
-        foreach ($results as $row) {
+</div>
 
-            echo '<tr>';
-
-            echo '<td>'.$row['post'].'</td>';
-            echo '<td>'.$row['url'].'</td>';
-            echo '<td>'.$row['status'].'</td>';
-            echo '<td>'.$row['code'].'</td>';
-
-            echo '</tr>';
-        }
-
-        echo '</table>';
-    }
-
-    echo '</div>';
+<?php
 }
