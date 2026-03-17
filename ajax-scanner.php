@@ -30,6 +30,36 @@ wp_send_json([
 
 }
 
+
+
+add_action('wp_ajax_bis_get_months_with_posts','bis_get_months_with_posts');
+
+function bis_get_months_with_posts(){
+
+$year = intval($_POST['year']);
+$date_type = $_POST['date_type'] ?? 'post_date';
+
+global $wpdb;
+
+$results = $wpdb->get_results("
+SELECT MONTH($date_type) as month, COUNT(*) as total
+FROM {$wpdb->posts}
+WHERE post_type='post'
+AND post_status='publish'
+AND YEAR($date_type) = $year
+GROUP BY MONTH($date_type)
+");
+
+$months = [];
+
+foreach($results as $row){
+$months[intval($row->month)] = intval($row->total);
+}
+
+wp_send_json($months);
+
+}
+
 function bis_scan_batch(){
 
 $offset=intval($_POST['offset']);

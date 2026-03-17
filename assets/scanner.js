@@ -4,7 +4,22 @@ let offset=0
 let totalPosts=0
 let allImages=[]
 
+$("#bis_year").change(function(){
+loadMonthsStatus()
+})
+
+loadMonthsStatus()
+
 $("#bis_start_scan").click(function(){
+
+    let selected = $("#bis_month option:selected")
+
+    if(selected.attr("data-empty") == "1"){
+
+    alert("No hay posts en ese mes")
+    return
+
+    }
 
 offset=0
 allImages=[]
@@ -26,6 +41,57 @@ scanBatch()
 })
 
 })
+
+
+
+function loadMonthsStatus(){
+
+$.post(bis_ajax.ajax_url,{
+
+action:'bis_get_months_with_posts',
+year:$("#bis_year").val(),
+date_type:'post_date'
+
+},function(res){
+
+$("#bis_month option").each(function(){
+
+let val = $(this).val()
+
+if(val === "") return
+
+if(!res[val]){
+
+$(this).text(getMonthName(val)+" (no data)")
+$(this).attr("data-empty","1")
+
+}else{
+
+$(this).text(getMonthName(val)+" ("+res[val]+")")
+$(this).removeAttr("data-empty")
+
+}
+
+})
+
+})
+
+}
+
+function getMonthName(m){
+
+const names = [
+"",
+"January","February","March","April","May","June",
+"July","August","September","October","November","December"
+]
+
+return names[m]
+
+}
+
+
+
 
 function scanBatch(){
 
