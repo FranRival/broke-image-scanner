@@ -4,6 +4,33 @@ if (!defined('ABSPATH')) exit;
 
 function bis_admin_page(){
 
+
+    global $wpdb;
+
+    // usamos post_date por ahora (luego se puede hacer dinámico)
+    $date_column = 'post_date';
+
+    $min_date = $wpdb->get_var("
+    SELECT MIN($date_column) 
+    FROM {$wpdb->posts} 
+    WHERE post_type='post' AND post_status='publish'
+    ");
+
+    $max_date = $wpdb->get_var("
+    SELECT MAX($date_column) 
+    FROM {$wpdb->posts} 
+    WHERE post_type='post' AND post_status='publish'
+    ");
+
+    // fallback por seguridad
+    if(!$min_date || !$max_date){
+        $min_year = date('Y');
+        $max_year = date('Y');
+    } else {
+        $min_year = date('Y', strtotime($min_date));
+        $max_year = date('Y', strtotime($max_date));
+    }
+
 ?>
 
 <div class="wrap">
@@ -15,12 +42,8 @@ function bis_admin_page(){
 
 <?php
 
-$current = date("Y");
-
-for($y=$current;$y>=2018;$y--){
-
+for($y=$max_year;$y>=$min_year;$y--){
 echo "<option value='$y'>$y</option>";
-
 }
 
 ?>
