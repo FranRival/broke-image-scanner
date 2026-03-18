@@ -16,6 +16,12 @@ add_action('wp_ajax_bis_get_months_with_posts','bis_get_months_with_posts');
 // =========================
 function bis_get_total_posts(){
 
+$file = WP_CONTENT_DIR . '/uploads/bis-temp.json';
+
+if(file_exists($file)){
+    unlink($file);
+}
+
 $year = isset($_POST['year']) ? intval($_POST['year']) : 0;
 $month = isset($_POST['month']) ? $_POST['month'] : '';
 
@@ -105,6 +111,24 @@ $query=new WP_Query($args);
 
 $images=[];
 $seen_urls=[];
+
+
+
+$file = WP_CONTENT_DIR . '/uploads/bis-temp.json';
+
+// leer existente
+$existing = [];
+
+if(file_exists($file)){
+    $existing = json_decode(file_get_contents($file), true);
+    if(!is_array($existing)) $existing = [];
+}
+
+// merge
+$merged = array_merge($existing, $images);
+
+// guardar
+file_put_contents($file, json_encode($merged));
 
 // 🔥 PROTECCIÓN AQUÍ
 if(empty($query->posts)){
@@ -220,7 +244,17 @@ add_action('wp_ajax_bis_generate_excel','bis_generate_excel');
 
 function bis_generate_excel(){
 
-$data = json_decode(stripslashes($_POST['data']), true);
+$file = WP_CONTENT_DIR . '/uploads/bis-temp.json';
+
+if(!file_exists($file)){
+    wp_send_json(['status'=>'error']);
+}
+
+$data = json_decode(file_get_contents($file), true);
+
+if(!$data){
+    wp_send_json(['status'=>'error']);
+}
 
 if(!$data){
     wp_send_json(['status'=>'error']);
