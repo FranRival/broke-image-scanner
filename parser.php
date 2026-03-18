@@ -18,6 +18,6 @@ $urls[]=$url;
 
 }
 
-return $urls;
+return array_slice($urls, 0, 10);
 
 }

@@ -19,16 +19,21 @@ function bis_get_total_posts(){
 $year=intval($_POST['year']);
 $month=$_POST['month'];
 
+$date_query = [
+    [
+        'year'=>$year
+    ]
+];
+
+if(!empty($month)){
+    $date_query[0]['month'] = intval($month);
+}
+
 $args=[
 'post_type'=>'post',
 'posts_per_page'=>-1,
 'fields'=>'ids',
-'date_query'=>[
-[
-'year'=>$year,
-'month'=>$month
-]
-]
+'date_query'=>$date_query
 ];
 
 $query=new WP_Query($args);
@@ -79,33 +84,37 @@ $offset=intval($_POST['offset']);
 $year=intval($_POST['year']);
 $month=$_POST['month'];
 
+$date_query = [
+    [
+        'year'=>$year
+    ]
+];
+
+if(!empty($month)){
+    $date_query[0]['month'] = intval($month);
+}
+
 $args=[
 'post_type'=>'post',
-'posts_per_page'=>5, // 🔥 reducido para estabilidad
+'posts_per_page'=>5,
 'offset'=>$offset,
-'date_query'=>[
-[
-'year'=>$year,
-'month'=>$month
-]
-]
+'date_query'=>$date_query
 ];
 
 $query=new WP_Query($args);
 
 $images=[];
-$seen_urls=[]; // deduplicación
+$seen_urls=[];
 
 foreach($query->posts as $post){
 
 $urls = bis_extract_images($post->post_content);
 
-// seguridad: evitar contenido vacío
 if(empty($urls) || !is_array($urls)) continue;
 
 foreach($urls as $url){
 
-// 🔥 validar URL
+// validar URL
 if(empty($url) || !filter_var($url, FILTER_VALIDATE_URL)){
 continue;
 }
@@ -128,6 +137,18 @@ $response = @wp_remote_head($url,[
 
 if(is_wp_error($response)){
 
+    // fallback a GET
+    $response = @wp_remote_get($url,[
+        'timeout' => 3,
+        'redirection' => 2
+    ]);
+}
+
+// =========================
+// EVALUAR RESPUESTA
+// =========================
+if(is_wp_error($response)){
+
 $status="timeout";
 $code="Timeout";
 
@@ -135,14 +156,14 @@ $code="Timeout";
 
 $code = wp_remote_retrieve_response_code($response);
 
-// fallback por si viene vacío
 if(!$code){
 $code = "Unknown";
 $status="timeout";
 }
-else if($code>=400){
+elseif($code>=400){
 $status="broken";
-}else{
+}
+else{
 $status="ok";
 }
 
@@ -150,10 +171,9 @@ $status="ok";
 
 
 // =========================
-// DOMAIN SEGURO
+// DOMAIN
 // =========================
 $domain = parse_url($url, PHP_URL_HOST);
-
 if(!$domain){
 $domain = 'unknown';
 }
@@ -178,9 +198,6 @@ $images[]=[
 
 }
 
-// =========================
-// RESPONSE
-// =========================
 wp_send_json([
 'images'=>$images,
 'processed'=>$offset + $query->post_count,
