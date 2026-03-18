@@ -150,14 +150,14 @@ function scanBatch(){
             )
 
             // ✅ FIN DEL SCAN
-            if(res.batch_count === 0){
+            if(res.batch_count === 0 || offset >= totalPosts){
 
-                $("#bis_progress").text("Scan complete")
+            $("#bis_progress").text("Scan complete")
 
-                generateExcel()
+            generateExcel()
 
-                return
-            }
+            return
+        }
 
             scanBatch()
         },
