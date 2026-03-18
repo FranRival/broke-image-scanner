@@ -16,8 +16,8 @@ add_action('wp_ajax_bis_get_months_with_posts','bis_get_months_with_posts');
 // =========================
 function bis_get_total_posts(){
 
-$year=intval($_POST['year']);
-$month=$_POST['month'];
+$year = isset($_POST['year']) ? intval($_POST['year']) : 0;
+$month = isset($_POST['month']) ? $_POST['month'] : '';
 
 $date_query = [
     [
@@ -81,8 +81,8 @@ wp_send_json($months);
 function bis_scan_batch(){
 
 $offset=intval($_POST['offset']);
-$year=intval($_POST['year']);
-$month=$_POST['month'];
+$year = isset($_POST['year']) ? intval($_POST['year']) : 0;
+$month = isset($_POST['month']) ? $_POST['month'] : '';
 
 $date_query = [
     [
@@ -105,6 +105,15 @@ $query=new WP_Query($args);
 
 $images=[];
 $seen_urls=[];
+
+// 🔥 PROTECCIÓN AQUÍ
+if(empty($query->posts)){
+    wp_send_json([
+        'images'=>[],
+        'processed'=>$offset,
+        'batch_count'=>0
+    ]);
+}
 
 foreach($query->posts as $post){
 
@@ -173,7 +182,8 @@ $status="ok";
 // =========================
 // DOMAIN
 // =========================
-$domain = parse_url($url, PHP_URL_HOST);
+$parsed = parse_url($url);
+$domain = isset($parsed['host']) ? $parsed['host'] : 'unknown';
 if(!$domain){
 $domain = 'unknown';
 }
@@ -202,6 +212,32 @@ wp_send_json([
 'images'=>$images,
 'processed'=>$offset + $query->post_count,
 'batch_count'=>$query->post_count
+]);
+
+}
+
+add_action('wp_ajax_bis_generate_excel','bis_generate_excel');
+
+function bis_generate_excel(){
+
+$data = json_decode(stripslashes($_POST['data']), true);
+
+if(!$data){
+    wp_send_json(['status'=>'error']);
+}
+
+$total = count($data);
+
+require_once BIS_PATH.'exporter.php';
+
+bis_generate_reports($data, $total);
+
+wp_send_json([
+    'status'=>'ok',
+    'files'=>[
+        'broken'=>BIS_URL.'broken-images-report.csv',
+        'timeout'=>BIS_URL.'timeout-images-report.csv'
+    ]
 ]);
 
 }
