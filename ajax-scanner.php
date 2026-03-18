@@ -112,24 +112,6 @@ $query=new WP_Query($args);
 $images=[];
 $seen_urls=[];
 
-
-
-$file = WP_CONTENT_DIR . '/uploads/bis-temp.json';
-
-// leer existente
-$existing = [];
-
-if(file_exists($file)){
-    $existing = json_decode(file_get_contents($file), true);
-    if(!is_array($existing)) $existing = [];
-}
-
-// merge
-$merged = array_merge($existing, $images);
-
-// guardar
-file_put_contents($file, json_encode($merged));
-
 // 🔥 PROTECCIÓN AQUÍ
 if(empty($query->posts)){
     wp_send_json([
@@ -232,6 +214,24 @@ $images[]=[
 
 }
 
+// ✅ 🔥 GUARDADO CORRECTO (AQUI ES DONDE DEBE IR)
+$file = WP_CONTENT_DIR . '/uploads/bis-temp.json';
+
+// leer existente
+$existing = [];
+
+if(file_exists($file)){
+    $existing = json_decode(file_get_contents($file), true);
+    if(!is_array($existing)) $existing = [];
+}
+
+// merge
+$merged = array_merge($existing, $images);
+
+// guardar
+file_put_contents($file, json_encode($merged));
+
+
 wp_send_json([
 'images'=>$images,
 'processed'=>$offset + $query->post_count,
@@ -240,6 +240,10 @@ wp_send_json([
 
 }
 
+
+// =========================
+// GENERAR EXCEL
+// =========================
 add_action('wp_ajax_bis_generate_excel','bis_generate_excel');
 
 function bis_generate_excel(){
@@ -251,10 +255,6 @@ if(!file_exists($file)){
 }
 
 $data = json_decode(file_get_contents($file), true);
-
-if(!$data){
-    wp_send_json(['status'=>'error']);
-}
 
 if(!$data){
     wp_send_json(['status'=>'error']);
