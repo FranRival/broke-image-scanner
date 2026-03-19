@@ -1,38 +1,161 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-function bis_generate_reports($images, $total, $path) {
-    $broken = []; $timeout = []; $domains = [];
+ini_set('memory_limit','512M');
+set_time_limit(0);
 
-    foreach($images as $img) {
-        $dom = $img['domain'] ?: 'unknown';
-        $domains[$dom] = ($domains[$dom] ?? 0) + 1;
-        $pct = ($total > 0) ? round((1 / $total) * 100, 4) . "%" : "0%";
-        $img['percentage'] = $pct;
+add_action('wp_ajax_bis_get_total_posts', 'bis_get_total_posts');
+add_action('wp_ajax_bis_get_months_with_posts', 'bis_get_months_with_posts');
+add_action('wp_ajax_bis_scan_batch', 'bis_scan_batch');
+add_action('wp_ajax_bis_generate_excel', 'bis_generate_excel');
 
-        if($img['error_type'] === "broken") $broken[] = $img;
-        if($img['error_type'] === "timeout") $timeout[] = $img;
-    }
+function bis_get_total_posts(){
 
-    bis_export_csv($path . 'broken-images-report.csv', $broken);
-    bis_export_csv($path . 'timeout-images-report.csv', $timeout);
-    bis_export_domains($path . 'domains-report.csv', $domains);
+    $upload_dir = wp_upload_dir();
+    $file = $upload_dir['basedir'] . '/bis-temp.json';
+
+    if(file_exists($file)) unlink($file);
+
+    $year = intval($_POST['year']);
+    $month = intval($_POST['month']);
+
+    $args = [
+        'post_type'=>'post',
+        'posts_per_page'=>-1,
+        'fields'=>'ids',
+        'date_query'=>[['year'=>$year]]
+    ];
+
+    if($month) $args['date_query'][0]['month']=$month;
+
+    $query = new WP_Query($args);
+
+    wp_send_json(['total_posts'=>count($query->posts)]);
 }
 
-function bis_export_csv($full_path, $rows) {
-    $file = fopen($full_path, 'w');
-    if(!$file) return;
-    fputcsv($file, ['Post ID','Post Title','Post URL','Image URL','HTTP Status','Error Type','Domain','Percentage']);
-    foreach($rows as $row) {
-        fputcsv($file, [$row['post_id'], $row['post_title'], $row['post_url'], $row['image_url'], $row['http_status'], $row['error_type'], $row['domain'], $row['percentage']]);
+
+function bis_get_months_with_posts(){
+
+    global $wpdb;
+    $year = intval($_POST['year']);
+
+    $results = $wpdb->get_results($wpdb->prepare("
+        SELECT MONTH(post_date) as month, COUNT(*) as total
+        FROM {$wpdb->posts}
+        WHERE post_type='post'
+        AND post_status='publish'
+        AND YEAR(post_date) = %d
+        GROUP BY MONTH(post_date)
+    ", $year));
+
+    $months=[];
+    foreach($results as $row){
+        $months[intval($row->month)] = intval($row->total);
     }
-    fclose($file);
+
+    wp_send_json($months);
 }
 
-function bis_export_domains($full_path, $domains) {
-    $file = fopen($full_path, 'w');
-    if(!$file) return;
-    fputcsv($file, ['Domain','Occurrences']);
-    foreach($domains as $dom => $count) fputcsv($file, [$dom, $count]);
-    fclose($file);
+
+function bis_scan_batch(){
+
+    $offset=intval($_POST['offset']);
+    $year=intval($_POST['year']);
+    $month=intval($_POST['month']);
+
+    $args=[
+        'post_type'=>'post',
+        'posts_per_page'=>5,
+        'offset'=>$offset,
+        'date_query'=>[['year'=>$year]]
+    ];
+
+    if($month) $args['date_query'][0]['month']=$month;
+
+    $query=new WP_Query($args);
+    $images=[];
+
+    if(!empty($query->posts)){
+
+        foreach($query->posts as $post){
+
+            preg_match_all('/<img[^>]+src="([^">]+)"/i',$post->post_content,$matches);
+
+            foreach(array_unique($matches[1] ?? []) as $url){
+
+                if(!filter_var($url,FILTER_VALIDATE_URL)) continue;
+
+                $response=wp_remote_head($url,['timeout'=>5]);
+
+                if(is_wp_error($response)){
+                    $response=wp_remote_get($url,['timeout'=>5]);
+                }
+
+                if(is_wp_error($response)){
+                    $status="timeout"; $code="Timeout";
+                }else{
+                    $code=wp_remote_retrieve_response_code($response);
+                    $status=($code>=400||!$code)?"broken":"ok";
+                }
+
+                $images[]=[
+                    'post_id'=>$post->ID,
+                    'post_title'=>$post->post_title,
+                    'post_url'=>get_permalink($post->ID),
+                    'image_url'=>$url,
+                    'http_status'=>$code,
+                    'error_type'=>$status,
+                    'domain'=>parse_url($url,PHP_URL_HOST) ?: 'unknown'
+                ];
+            }
+        }
+    }
+
+    $upload_dir = wp_upload_dir();
+    $file = $upload_dir['basedir'].'/bis-temp.json';
+
+    $existing = file_exists($file) ? json_decode(file_get_contents($file),true) : [];
+
+    file_put_contents($file,json_encode(array_merge((array)$existing,$images)));
+
+    wp_send_json([
+        'images'=>$images,
+        'batch_count'=>$query->post_count
+    ]);
+}
+
+
+function bis_generate_excel(){
+
+    error_log("GENERATE EXCEL CALLED"); // 🔥 DEBUG
+
+    $upload_dir = wp_upload_dir();
+
+    $file = $upload_dir['basedir'].'/bis-temp.json';
+
+    if(!file_exists($file)){
+        wp_send_json(['status'=>'error','msg'=>'No JSON']);
+    }
+
+    $data = json_decode(file_get_contents($file),true);
+
+    error_log("DATA COUNT: ".count($data)); // 🔥 DEBUG
+
+    $path = $upload_dir['basedir'].'/bis-reports/';
+
+    if(!file_exists($path)){
+        wp_mkdir_p($path);
+    }
+
+    require_once BIS_PATH.'exporter.php';
+
+    bis_generate_reports($data,count($data),$path);
+
+    wp_send_json([
+        'status'=>'ok',
+        'files'=>[
+            'broken'=>$upload_dir['baseurl'].'/bis-reports/broken-images-report.csv',
+            'timeout'=>$upload_dir['baseurl'].'/bis-reports/timeout-images-report.csv'
+        ]
+    ]);
 }
