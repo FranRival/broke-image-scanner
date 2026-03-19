@@ -127,19 +127,24 @@ function bis_scan_batch(){
 
 function bis_generate_excel(){
 
-    error_log("GENERATE EXCEL CALLED"); // 🔥 DEBUG
+    error_log("GENERATE EXCEL CALLED");
 
     $upload_dir = wp_upload_dir();
-
     $file = $upload_dir['basedir'].'/bis-temp.json';
 
     if(!file_exists($file)){
-        wp_send_json(['status'=>'error','msg'=>'No JSON']);
+        wp_send_json(['status'=>'error','msg'=>'No JSON file']);
     }
 
     $data = json_decode(file_get_contents($file),true);
 
-    error_log("DATA COUNT: ".count($data)); // 🔥 DEBUG
+    if(!is_array($data)){
+        wp_send_json(['status'=>'error','msg'=>'Invalid JSON']);
+    }
+
+    if(empty($data)){
+        wp_send_json(['status'=>'error','msg'=>'Empty data']);
+    }
 
     $path = $upload_dir['basedir'].'/bis-reports/';
 
@@ -147,9 +152,13 @@ function bis_generate_excel(){
         wp_mkdir_p($path);
     }
 
-    require_once BIS_PATH.'exporter.php';
+    if(!file_exists($path)){
+        wp_send_json(['status'=>'error','msg'=>'Cannot create folder']);
+    }
 
-    bis_generate_reports($data,count($data),$path);
+    require_once BIS_PATH . 'exporter.php';
+
+    bis_generate_reports($data, count($data), $path);
 
     wp_send_json([
         'status'=>'ok',
