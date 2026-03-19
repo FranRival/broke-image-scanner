@@ -39,7 +39,7 @@ wp_enqueue_script(
 'bis-scanner',
 BIS_URL.'assets/scanner.js',
 ['jquery'],
-null,
+time(),
 true
 );
 
