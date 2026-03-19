@@ -9,6 +9,10 @@ add_action('wp_ajax_bis_get_months_with_posts', 'bis_get_months_with_posts');
 add_action('wp_ajax_bis_scan_batch', 'bis_scan_batch');
 add_action('wp_ajax_bis_generate_excel', 'bis_generate_excel');
 
+
+// =========================
+// TOTAL POSTS
+// =========================
 function bis_get_total_posts(){
 
     $upload_dir = wp_upload_dir();
@@ -16,24 +20,40 @@ function bis_get_total_posts(){
 
     if(file_exists($file)) unlink($file);
 
-    $year = intval($_POST['year']);
-    $month = intval($_POST['month']);
+    $year = isset($_POST['year']) && $_POST['year'] != '' 
+        ? intval($_POST['year']) 
+        : date('Y');
+
+    $month = isset($_POST['month']) && $_POST['month'] !== '' 
+        ? intval($_POST['month']) 
+        : null;
 
     $args = [
         'post_type'=>'post',
         'posts_per_page'=>-1,
         'fields'=>'ids',
-        'date_query'=>[['year'=>$year]]
+        'date_query'=>[
+            [
+                'year'=>$year
+            ]
+        ]
     ];
 
-    if($month) $args['date_query'][0]['month']=$month;
+    if(!empty($month)){
+        $args['date_query'][0]['month'] = $month;
+    }
 
     $query = new WP_Query($args);
 
-    wp_send_json(['total_posts'=>count($query->posts)]);
+    wp_send_json([
+        'total_posts'=>count($query->posts)
+    ]);
 }
 
 
+// =========================
+// MESES CON POSTS
+// =========================
 function bis_get_months_with_posts(){
 
     global $wpdb;
@@ -57,22 +77,37 @@ function bis_get_months_with_posts(){
 }
 
 
+// =========================
+// SCAN BATCH
+// =========================
 function bis_scan_batch(){
 
-    $offset=intval($_POST['offset']);
-    $year=intval($_POST['year']);
-    $month=intval($_POST['month']);
+    $offset = intval($_POST['offset']);
+
+    $year = isset($_POST['year']) && $_POST['year'] != '' 
+        ? intval($_POST['year']) 
+        : date('Y');
+
+    $month = isset($_POST['month']) && $_POST['month'] !== '' 
+        ? intval($_POST['month']) 
+        : null;
 
     $args=[
         'post_type'=>'post',
         'posts_per_page'=>5,
         'offset'=>$offset,
-        'date_query'=>[['year'=>$year]]
+        'date_query'=>[
+            [
+                'year'=>$year
+            ]
+        ]
     ];
 
-    if($month) $args['date_query'][0]['month']=$month;
+    if(!empty($month)){
+        $args['date_query'][0]['month'] = $month;
+    }
 
-    $query=new WP_Query($args);
+    $query = new WP_Query($args);
     $images=[];
 
     if(!empty($query->posts)){
@@ -85,17 +120,18 @@ function bis_scan_batch(){
 
                 if(!filter_var($url,FILTER_VALIDATE_URL)) continue;
 
-                $response=wp_remote_head($url,['timeout'=>5]);
+                $response = wp_remote_head($url,['timeout'=>5]);
 
                 if(is_wp_error($response)){
-                    $response=wp_remote_get($url,['timeout'=>5]);
+                    $response = wp_remote_get($url,['timeout'=>5]);
                 }
 
                 if(is_wp_error($response)){
-                    $status="timeout"; $code="Timeout";
+                    $status="timeout"; 
+                    $code="Timeout";
                 }else{
-                    $code=wp_remote_retrieve_response_code($response);
-                    $status=($code>=400||!$code)?"broken":"ok";
+                    $code = wp_remote_retrieve_response_code($response);
+                    $status = ($code>=400||!$code)?"broken":"ok";
                 }
 
                 $images[]=[
@@ -125,21 +161,25 @@ function bis_scan_batch(){
 }
 
 
+// =========================
+// GENERAR EXCEL
+// =========================
 function bis_generate_excel(){
 
-    error_log("GENERATE EXCEL CALLED"); // 🔥 DEBUG
-
     $upload_dir = wp_upload_dir();
-
     $file = $upload_dir['basedir'].'/bis-temp.json';
 
     if(!file_exists($file)){
         wp_send_json(['status'=>'error','msg'=>'No JSON']);
+        return;
     }
 
     $data = json_decode(file_get_contents($file),true);
 
-    error_log("DATA COUNT: ".count($data)); // 🔥 DEBUG
+    if(!is_array($data) || empty($data)){
+        wp_send_json(['status'=>'error','msg'=>'Empty data']);
+        return;
+    }
 
     $path = $upload_dir['basedir'].'/bis-reports/';
 
