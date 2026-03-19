@@ -1,103 +1,38 @@
 <?php
-
 if (!defined('ABSPATH')) exit;
 
-function bis_generate_reports($images,$total){
+function bis_generate_reports($images, $total, $path) {
+    $broken = []; $timeout = []; $domains = [];
 
-$broken=[];
-$timeout=[];
-$domains=[];
+    foreach($images as $img) {
+        $dom = $img['domain'] ?: 'unknown';
+        $domains[$dom] = ($domains[$dom] ?? 0) + 1;
+        $pct = ($total > 0) ? round((1 / $total) * 100, 4) . "%" : "0%";
+        $img['percentage'] = $pct;
 
-foreach($images as $img){
+        if($img['error_type'] === "broken") $broken[] = $img;
+        if($img['error_type'] === "timeout") $timeout[] = $img;
+    }
 
-if(!isset($domains[$img['domain']])){
-$domains[$img['domain']]=0;
+    bis_export_csv($path . 'broken-images-report.csv', $broken);
+    bis_export_csv($path . 'timeout-images-report.csv', $timeout);
+    bis_export_domains($path . 'domains-report.csv', $domains);
 }
 
-$domains[$img['domain']]++;
-
-if($img['error_type']=="broken"){
-
-$img['percentage']=round((1/$total)*100,4)."%";
-$broken[]=$img;
-
+function bis_export_csv($full_path, $rows) {
+    $file = fopen($full_path, 'w');
+    if(!$file) return;
+    fputcsv($file, ['Post ID','Post Title','Post URL','Image URL','HTTP Status','Error Type','Domain','Percentage']);
+    foreach($rows as $row) {
+        fputcsv($file, [$row['post_id'], $row['post_title'], $row['post_url'], $row['image_url'], $row['http_status'], $row['error_type'], $row['domain'], $row['percentage']]);
+    }
+    fclose($file);
 }
 
-if($img['error_type']=="timeout"){
-
-$img['percentage']=round((1/$total)*100,4)."%";
-$timeout[]=$img;
-
-}
-
-}
-
-bis_export_csv('broken-images-report.csv',$broken);
-bis_export_csv('timeout-images-report.csv',$timeout);
-bis_export_domains('domains-report.csv',$domains);
-
-}
-
-function bis_export_csv($filename,$rows){
-
-$file=fopen(BIS_PATH.$filename,'w');
-
-fputcsv($file,[
-
-'Post ID',
-'Post Title',
-'Post URL',
-'Image URL',
-'HTTP Status',
-'Error Type',
-'Domain',
-'Percentage'
-
-]);
-
-foreach($rows as $row){
-
-fputcsv($file,[
-
-$row['post_id'],
-$row['post_title'],
-$row['post_url'],
-$row['image_url'],
-$row['http_status'],
-$row['error_type'],
-$row['domain'],
-$row['percentage']
-
-]);
-
-}
-
-fclose($file);
-
-}
-
-function bis_export_domains($filename,$domains){
-
-$file=fopen(BIS_PATH.$filename,'w');
-
-fputcsv($file,[
-
-'Domain',
-'Occurrences'
-
-]);
-
-foreach($domains as $domain=>$count){
-
-fputcsv($file,[
-
-$domain,
-$count
-
-]);
-
-}
-
-fclose($file);
-
+function bis_export_domains($full_path, $domains) {
+    $file = fopen($full_path, 'w');
+    if(!$file) return;
+    fputcsv($file, ['Domain','Occurrences']);
+    foreach($domains as $dom => $count) fputcsv($file, [$dom, $count]);
+    fclose($file);
 }
