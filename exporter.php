@@ -7,6 +7,10 @@ if (!defined('ABSPATH')) exit;
 // =========================
 function bis_generate_reports($images, $total, $path){
 
+    // 🔥 limpiar archivos previos
+    @unlink($path . 'broken-images-report.csv');
+    @unlink($path . 'timeout-images-report.csv');
+
     $broken = [];
     $timeout = [];
 
@@ -34,7 +38,7 @@ function bis_generate_reports($images, $total, $path){
 // =========================
 function bis_export_csv($file, $rows){
 
-    $fp = fopen($file, 'w');
+    $fp = fopen($file, 'w+'); // 🔥 FIX
 
     if(!$fp){
         error_log("ERROR WRITING FILE: " . $file);
@@ -67,4 +71,5 @@ function bis_export_csv($file, $rows){
     }
 
     fclose($fp);
+    chmod($file, 0644);
 }
