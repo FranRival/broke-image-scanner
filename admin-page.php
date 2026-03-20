@@ -51,9 +51,27 @@ function bis_admin_page(){
 
     // 🔥 obtener TAGS
     $tags = get_terms([
-        'taxonomy' => 'post_tag',
-        'hide_empty' => false
-    ]);
+    'taxonomy' => 'post_tag',
+    'hide_empty' => false
+]);
+
+// 🔥 obtener conteo real de posts por tag
+    $tag_counts = [];
+
+    $results = $wpdb->get_results("
+        SELECT tt.term_id, COUNT(p.ID) as total
+        FROM {$wpdb->term_taxonomy} tt
+        LEFT JOIN {$wpdb->term_relationships} tr ON tt.term_taxonomy_id = tr.term_taxonomy_id
+        LEFT JOIN {$wpdb->posts} p ON tr.object_id = p.ID
+        WHERE tt.taxonomy = 'post_tag'
+        AND p.post_type = 'post'
+        AND p.post_status = 'publish'
+        GROUP BY tt.term_id
+    ");
+
+    foreach($results as $row){
+        $tag_counts[$row->term_id] = intval($row->total);
+    }
 
 ?>
 
@@ -90,7 +108,13 @@ for($m=1;$m<=12;$m++){
 <?php
 if(!empty($tags) && !is_wp_error($tags)){
     foreach($tags as $tag){
-        echo "<option value='{$tag->slug}'>{$tag->name}</option>";
+        $count = isset($tag_counts[$tag->term_id]) 
+            ? $tag_counts[$tag->term_id] 
+            : 0;
+
+        echo "<option value='{$tag->slug}'>
+            {$tag->name} ({$count})
+        </option>";
     }
 }
 ?>
