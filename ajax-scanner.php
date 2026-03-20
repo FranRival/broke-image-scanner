@@ -28,6 +28,9 @@ function bis_get_total_posts(){
         ? intval($_POST['month']) 
         : null;
 
+    // 🔥 NUEVO (UBICACIÓN 1): capturar TAG
+    $tag = isset($_POST['tag']) ? sanitize_text_field($_POST['tag']) : '';
+
     $args = [
         'post_type'=>'post',
         'posts_per_page'=>-1,
@@ -41,6 +44,11 @@ function bis_get_total_posts(){
 
     if(!empty($month)){
         $args['date_query'][0]['month'] = $month;
+    }
+
+    // 🔥 NUEVO (UBICACIÓN 2): aplicar filtro por TAG
+    if(!empty($tag)){
+        $args['tag'] = $tag;
     }
 
     $query = new WP_Query($args);
@@ -92,6 +100,9 @@ function bis_scan_batch(){
         ? intval($_POST['month']) 
         : null;
 
+    // 🔥 NUEVO (UBICACIÓN 3): capturar TAG
+    $tag = isset($_POST['tag']) ? sanitize_text_field($_POST['tag']) : '';
+
     $args=[
         'post_type'=>'post',
         'posts_per_page'=>5,
@@ -105,6 +116,11 @@ function bis_scan_batch(){
 
     if(!empty($month)){
         $args['date_query'][0]['month'] = $month;
+    }
+
+    // 🔥 NUEVO (UBICACIÓN 4): aplicar filtro por TAG
+    if(!empty($tag)){
+        $args['tag'] = $tag;
     }
 
     $query = new WP_Query($args);

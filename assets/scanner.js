@@ -17,10 +17,19 @@ $("#bis_start_scan").click(function(){
     $("#bis_stats").html("");
     $("#bis_start_scan").prop("disabled", true);
 
+    // 🔥 NUEVO: si hay TAG seleccionado, ignorar mes automáticamente
+    if($("#bis_tag").val() !== ""){
+        $("#bis_month").val("");
+    }
+
     $.post(bis_ajax.ajax_url, {
         action: 'bis_get_total_posts',
         year: $("#bis_year").val(),
-        month: $("#bis_month").val()
+        month: $("#bis_month").val(),
+
+        // 🔥 NUEVO (UBICACIÓN 1): enviar TAG al backend
+        tag: $("#bis_tag").val()
+
     }, function(res){
 
         totalPosts = parseInt(res.total_posts);
@@ -43,7 +52,11 @@ function scanBatch(){
         action: 'bis_scan_batch',
         offset: offset,
         year: $("#bis_year").val(),
-        month: $("#bis_month").val()
+        month: $("#bis_month").val(),
+
+        // 🔥 NUEVO (UBICACIÓN 2): enviar TAG también en cada batch
+        tag: $("#bis_tag").val()
+
     }, function(res){
 
         offset += res.batch_count;

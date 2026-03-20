@@ -49,6 +49,12 @@ function bis_admin_page(){
         $data[$row->year][$row->month] = $row->total;
     }
 
+    // 🔥 obtener TAGS
+    $tags = get_terms([
+        'taxonomy' => 'post_tag',
+        'hide_empty' => false
+    ]);
+
 ?>
 
 <div class="wrap">
@@ -72,6 +78,20 @@ for($y=$max_year;$y>=$min_year;$y--){
 <?php
 for($m=1;$m<=12;$m++){
     echo "<option value='$m'>$m</option>";
+}
+?>
+</select>
+
+<!-- 🔥 NUEVO SELECTOR TAG -->
+
+<label>Tag</label>
+<select id="bis_tag">
+<option value="">All</option>
+<?php
+if(!empty($tags) && !is_wp_error($tags)){
+    foreach($tags as $tag){
+        echo "<option value='{$tag->slug}'>{$tag->name}</option>";
+    }
 }
 ?>
 </select>
@@ -113,7 +133,6 @@ for($year=$max_year; $year >= $min_year; $year--){
 
         $month_name = date("F", mktime(0,0,0,$m,1));
 
-        // gris si no hay contenido
         $style = $count == 0 ? "style='color:#999'" : "";
 
         echo "<tr $style>";
