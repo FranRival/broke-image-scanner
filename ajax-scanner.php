@@ -7,7 +7,9 @@ set_time_limit(0);
 add_action('wp_ajax_bis_get_total_posts', 'bis_get_total_posts');
 add_action('wp_ajax_bis_get_months_with_posts', 'bis_get_months_with_posts');
 add_action('wp_ajax_bis_scan_batch', 'bis_scan_batch');
-add_action('wp_ajax_bis_generate_excel', 'bis_generate_excel');
+
+// 🔥 action renombrado
+add_action('wp_ajax_bis_finalize', 'bis_generate_excel');
 
 
 // =========================
@@ -17,18 +19,10 @@ function bis_get_total_posts(){
 
     $upload_dir = wp_upload_dir();
     $file = $upload_dir['basedir'] . '/bis-temp.json';
-
     if(file_exists($file)) unlink($file);
 
-    $year = isset($_POST['year']) && $_POST['year'] != '' 
-        ? intval($_POST['year']) 
-        : date('Y');
-
-    $month = isset($_POST['month']) && $_POST['month'] !== '' 
-        ? intval($_POST['month']) 
-        : null;
-
-    // 🔥 NUEVO (UBICACIÓN 1): capturar TAG
+    $year = isset($_POST['year']) ? intval($_POST['year']) : date('Y');
+    $month = isset($_POST['month']) && $_POST['month'] !== '' ? intval($_POST['month']) : null;
     $tag = isset($_POST['tag']) ? sanitize_text_field($_POST['tag']) : '';
 
     $args = [
@@ -38,7 +32,6 @@ function bis_get_total_posts(){
         'post_status'=>'publish'
     ];
 
-    // SOLO aplicar fecha si NO hay tag
     if(empty($tag)){
         $args['date_query'] = [
             [
@@ -51,11 +44,6 @@ function bis_get_total_posts(){
         }
     }
 
-    if(!empty($month)){
-        $args['date_query'][0]['month'] = $month;
-    }
-
-    // 🔥 NUEVO (UBICACIÓN 2): aplicar filtro por TAG
     if(!empty($tag)){
         $args['tax_query'] = [
             [
@@ -101,131 +89,133 @@ function bis_get_months_with_posts(){
 
 
 // =========================
-// SCAN BATCH
-// =========================
+// SCAN BATCH (SOLO UNA FUNCIÓN)
 function bis_scan_batch(){
 
-    $offset = intval($_POST['offset']);
+    try {
 
-    $year = isset($_POST['year']) && $_POST['year'] != '' 
-        ? intval($_POST['year']) 
-        : date('Y');
+        $offset = intval($_POST['offset']);
+        $year = isset($_POST['year']) ? intval($_POST['year']) : date('Y');
+        $month = isset($_POST['month']) && $_POST['month'] !== '' ? intval($_POST['month']) : null;
+        $tag = isset($_POST['tag']) ? sanitize_text_field($_POST['tag']) : '';
 
-    $month = isset($_POST['month']) && $_POST['month'] !== '' 
-        ? intval($_POST['month']) 
-        : null;
-
-    // 🔥 NUEVO (UBICACIÓN 3): capturar TAG
-    $tag = isset($_POST['tag']) ? sanitize_text_field($_POST['tag']) : '';
-
-    $args=[
-        'post_type'=>'post',
-        'posts_per_page'=>5,
-        'offset'=>$offset,
-        'post_status'=>'publish'
-    ];
-
-    // SOLO aplicar fecha si NO hay tag
-    if(empty($tag)){
-        $args['date_query'] = [
-            [
-                'year'=>$year
-            ]
+        $args=[
+            'post_type'=>'post',
+            'posts_per_page'=>2,
+            'offset'=>$offset,
+            'post_status'=>'publish',
+            'orderby'=>'ID',
+            'order'=>'ASC'
         ];
 
-        if(!empty($month)){
-            $args['date_query'][0]['month'] = $month;
-        }
-    }
+        if(empty($tag)){
+            $args['date_query'] = [
+                ['year'=>$year]
+            ];
 
-    if(!empty($month)){
-        $args['date_query'][0]['month'] = $month;
-    }
-
-    // 🔥 NUEVO (UBICACIÓN 4): aplicar filtro por TAG
-
-    if(!empty($tag)){
-        $args['tax_query'] = [
-            [
-                'taxonomy' => 'post_tag',
-                'field'    => 'slug',
-                'terms'    => $tag,
-            ]
-        ];
-    }
-
-    $query = new WP_Query($args);
-    $images=[];
-
-    if(!empty($query->posts)){
-
-        foreach($query->posts as $post){
-
-            preg_match_all('/<img[^>]+src="([^">]+)"/i',$post->post_content,$matches);
-
-            foreach(array_unique($matches[1] ?? []) as $url){
-
-                if(!filter_var($url,FILTER_VALIDATE_URL)) continue;
-
-                $response = wp_remote_head($url,['timeout'=>5]);
-
-                if(is_wp_error($response)){
-                    $response = wp_remote_get($url,['timeout'=>5]);
-                }
-
-                if(is_wp_error($response)){
-                    $status="timeout"; 
-                    $code="Timeout";
-                }else{
-                    $code = wp_remote_retrieve_response_code($response);
-                    $status = ($code>=400||!$code)?"broken":"ok";
-                }
-
-                $images[]=[
-                    'post_id'=>$post->ID,
-                    'post_title'=>$post->post_title,
-                    'post_url'=>get_permalink($post->ID),
-                    'image_url'=>$url,
-                    'http_status'=>$code,
-                    'error_type'=>$status,
-                    'domain'=>parse_url($url,PHP_URL_HOST) ?: 'unknown'
-                ];
+            if(!empty($month)){
+                $args['date_query'][0]['month'] = $month;
             }
         }
+
+        if(!empty($tag)){
+            $args['tax_query'] = [
+                [
+                    'taxonomy' => 'post_tag',
+                    'field'    => 'slug',
+                    'terms'    => $tag,
+                ]
+            ];
+        }
+
+        $query = new WP_Query($args);
+        $images=[];
+
+        if(!empty($query->posts)){
+
+            foreach($query->posts as $post){
+
+                preg_match_all('/<img[^>]+src="([^">]+)"/i',$post->post_content,$matches);
+
+                $limit = 3;
+                $count = 0;
+
+                foreach(array_unique($matches[1] ?? []) as $url){
+
+                    if($count >= $limit) break;
+                    $count++;
+
+                    if(!filter_var($url,FILTER_VALIDATE_URL)) continue;
+
+                    $response = wp_remote_get($url,[
+                        'timeout'=>3,
+                        'redirection'=>2,
+                        'sslverify'=>false
+                    ]);
+
+                    if(is_wp_error($response)){
+                        $status="timeout"; 
+                        $code="Timeout";
+                    }else{
+                        $code = wp_remote_retrieve_response_code($response);
+                        $status = ($code>=400||!$code)?"broken":"ok";
+                    }
+
+                    $images[]=[
+                        'post_id'=>$post->ID,
+                        'post_title'=>$post->post_title,
+                        'post_url'=>get_permalink($post->ID),
+                        'image_url'=>$url,
+                        'http_status'=>$code,
+                        'error_type'=>$status,
+                        'domain'=>parse_url($url,PHP_URL_HOST) ?: 'unknown'
+                    ];
+                }
+            }
+        }
+
+        $upload_dir = wp_upload_dir();
+        $file = $upload_dir['basedir'].'/bis-temp.json';
+
+        $existing = file_exists($file) ? json_decode(file_get_contents($file),true) : [];
+
+        file_put_contents($file,json_encode(array_merge((array)$existing,$images)));
+
+        wp_send_json([
+            'images'=>$images,
+            'batch_count'=>$query->post_count
+        ]);
+
+    } catch (Exception $e){
+
+        wp_send_json([
+            'images'=>[],
+            'batch_count'=>0,
+            'error'=>$e->getMessage()
+        ]);
     }
-
-    $upload_dir = wp_upload_dir();
-    $file = $upload_dir['basedir'].'/bis-temp.json';
-
-    $existing = file_exists($file) ? json_decode(file_get_contents($file),true) : [];
-
-    file_put_contents($file,json_encode(array_merge((array)$existing,$images)));
-
-    wp_send_json([
-        'images'=>$images,
-        'batch_count'=>$query->post_count
-    ]);
 }
 
 
 // =========================
-// GENERAR EXCEL
-// =========================
+// GENERAR EXCEL (CORREGIDO)
 function bis_generate_excel(){
+
+    if(!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'],'bis_nonce')){
+        wp_send_json(['status'=>'error','msg'=>'Invalid nonce']);
+    }
 
     $upload_dir = wp_upload_dir();
     $file = $upload_dir['basedir'].'/bis-temp.json';
 
     if(!file_exists($file)){
         wp_send_json(['status'=>'error','msg'=>'No JSON']);
-        return;
     }
 
     $data = json_decode(file_get_contents($file),true);
 
     if(!is_array($data) || empty($data)){
         wp_send_json(['status'=>'error','msg'=>'Empty data']);
-        return;
     }
 
     $path = $upload_dir['basedir'].'/bis-reports/';

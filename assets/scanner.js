@@ -85,12 +85,14 @@ function scanBatch(){
 }
 
 
+
 function generateExcel(){
 
-    console.log("AJAX REQUEST → bis_generate_excel");
+    console.log("AJAX REQUEST → bis_finalize");
 
     $.post(bis_ajax.ajax_url, {
-        action: 'bis_generate_excel'
+        action: 'bis_finalize',
+        nonce: bis_ajax.nonce
     }, function(res){
 
         console.log("EXCEL RESPONSE:", res);
@@ -105,7 +107,7 @@ function generateExcel(){
 
         } else {
 
-            $("#bis_stats").html("Error generating reports");
+            $("#bis_stats").html("Error: " + (res.msg || "Unknown"));
 
         }
 
@@ -115,12 +117,14 @@ function generateExcel(){
 
         console.log("EXCEL ERROR:", err);
 
-        $("#bis_stats").html("Error generating reports (AJAX FAIL)");
+        $("#bis_stats").html("AJAX FAIL (WAF probablemente)");
         $("#bis_start_scan").prop("disabled", false);
 
     });
-
 }
+
+
+
 
 
 function loadMonthsStatus(){

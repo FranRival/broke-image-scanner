@@ -33,18 +33,29 @@ add_menu_page(
 
 add_action('admin_enqueue_scripts','bis_scripts');
 
-function bis_scripts(){
+add_action('admin_enqueue_scripts','bis_scripts');
 
-wp_enqueue_script(
-'bis-scanner',
-BIS_URL.'assets/scanner.js',
-['jquery'],
-time(),
-true
-);
+function bis_scripts($hook){
 
-wp_localize_script('bis-scanner','bis_ajax',[
-'ajax_url'=>admin_url('admin-ajax.php')
-]);
+    // 🔥 OPCIONAL (pero recomendado): cargar solo en tu plugin
+    if($hook !== 'toplevel_page_broken-image-scanner'){
+        return;
+    }
 
+    wp_enqueue_script(
+        'bis-scanner',
+        BIS_URL.'assets/scanner.js',
+        ['jquery'],
+        time(),
+        true
+    );
+
+    wp_localize_script('bis-scanner','bis_ajax',[
+        'ajax_url'=>admin_url('admin-ajax.php'),
+        'nonce'=>wp_create_nonce('bis_nonce') // 🔥 CLAVE
+    ]);
 }
+
+
+
+
