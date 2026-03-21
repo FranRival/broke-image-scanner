@@ -92,7 +92,8 @@ function generateExcel(){
 
     $.post(bis_ajax.ajax_url, {
         action: 'bis_finalize',
-        nonce: bis_ajax.nonce
+        nonce: bis_ajax.nonce,
+        tag: $("#bis_tag").val()
     }, function(res){
 
         console.log("EXCEL RESPONSE:", res);

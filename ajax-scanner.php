@@ -199,6 +199,7 @@ function bis_scan_batch(){
 
 // =========================
 // GENERAR EXCEL (CORREGIDO)
+
 function bis_generate_excel(){
 
     if(!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'],'bis_nonce')){
@@ -226,13 +227,44 @@ function bis_generate_excel(){
 
     require_once BIS_PATH.'exporter.php';
 
-    bis_generate_reports($data,count($data),$path);
+    // 🔥 generar archivos base
+    bis_generate_reports($data, count($data), $path);
+
+    // =========================
+    // 🔥 NAMING PROFESIONAL
+    // =========================
+
+    $domain = parse_url(home_url(), PHP_URL_HOST);
+    $date   = date('Y-m-d');
+
+    // TAG opcional
+    $tag = isset($_POST['tag']) ? sanitize_text_field($_POST['tag']) : '';
+    $tag_part = !empty($tag) ? '_tag-'.$tag : '';
+
+    $broken_name  = "bis_broken_images_{$domain}{$tag_part}_{$date}.csv";
+    $timeout_name = "bis_timeout_images_{$domain}{$tag_part}_{$date}.csv";
+
+    // archivos originales (los que crea exporter.php)
+    $original_broken  = $path.'broken-images-report.csv';
+    $original_timeout = $path.'timeout-images-report.csv';
+
+    $final_broken  = $path.$broken_name;
+    $final_timeout = $path.$timeout_name;
+
+    // 🔥 renombrar si existen
+    if(file_exists($original_broken)){
+        rename($original_broken, $final_broken);
+    }
+
+    if(file_exists($original_timeout)){
+        rename($original_timeout, $final_timeout);
+    }
 
     wp_send_json([
         'status'=>'ok',
         'files'=>[
-            'broken'=>$upload_dir['baseurl'].'/bis-reports/broken-images-report.csv',
-            'timeout'=>$upload_dir['baseurl'].'/bis-reports/timeout-images-report.csv'
+            'broken'  => $upload_dir['baseurl'].'/bis-reports/'.$broken_name,
+            'timeout' => $upload_dir['baseurl'].'/bis-reports/'.$timeout_name
         ]
     ]);
 }
