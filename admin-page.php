@@ -112,9 +112,7 @@ if(!empty($tags) && !is_wp_error($tags)){
             ? $tag_counts[$tag->term_id] 
             : 0;
 
-        echo "<option value='{$tag->slug}'>
-            {$tag->name} ({$count})
-        </option>";
+        echo "<option value='{$tag->slug}'>{$tag->name} ({$tag->count})</option>";
     }
 }
 ?>

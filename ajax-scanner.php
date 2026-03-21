@@ -35,12 +35,21 @@ function bis_get_total_posts(){
         'post_type'=>'post',
         'posts_per_page'=>-1,
         'fields'=>'ids',
-        'date_query'=>[
+        'post_status'=>'publish'
+    ];
+
+    // SOLO aplicar fecha si NO hay tag
+    if(empty($tag)){
+        $args['date_query'] = [
             [
                 'year'=>$year
             ]
-        ]
-    ];
+        ];
+
+        if(!empty($month)){
+            $args['date_query'][0]['month'] = $month;
+        }
+    }
 
     if(!empty($month)){
         $args['date_query'][0]['month'] = $month;
@@ -48,7 +57,13 @@ function bis_get_total_posts(){
 
     // 🔥 NUEVO (UBICACIÓN 2): aplicar filtro por TAG
     if(!empty($tag)){
-        $args['tag'] = $tag;
+        $args['tax_query'] = [
+            [
+                'taxonomy' => 'post_tag',
+                'field'    => 'slug',
+                'terms'    => $tag,
+            ]
+        ];
     }
 
     $query = new WP_Query($args);
@@ -107,20 +122,36 @@ function bis_scan_batch(){
         'post_type'=>'post',
         'posts_per_page'=>5,
         'offset'=>$offset,
-        'date_query'=>[
+        'post_status'=>'publish'
+    ];
+
+    // SOLO aplicar fecha si NO hay tag
+    if(empty($tag)){
+        $args['date_query'] = [
             [
                 'year'=>$year
             ]
-        ]
-    ];
+        ];
+
+        if(!empty($month)){
+            $args['date_query'][0]['month'] = $month;
+        }
+    }
 
     if(!empty($month)){
         $args['date_query'][0]['month'] = $month;
     }
 
     // 🔥 NUEVO (UBICACIÓN 4): aplicar filtro por TAG
+
     if(!empty($tag)){
-        $args['tag'] = $tag;
+        $args['tax_query'] = [
+            [
+                'taxonomy' => 'post_tag',
+                'field'    => 'slug',
+                'terms'    => $tag,
+            ]
+        ];
     }
 
     $query = new WP_Query($args);
