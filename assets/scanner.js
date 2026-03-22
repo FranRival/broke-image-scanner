@@ -93,7 +93,10 @@ function generateExcel(){
     $.post(bis_ajax.ajax_url, {
         action: 'bis_finalize',
         nonce: bis_ajax.nonce,
+        year: $("#bis_year").val(),
+        month: $("#bis_month").val(),
         tag: $("#bis_tag").val()
+
     }, function(res){
 
         console.log("EXCEL RESPONSE:", res);

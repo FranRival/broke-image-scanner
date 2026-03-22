@@ -200,6 +200,7 @@ function bis_scan_batch(){
 // =========================
 // GENERAR EXCEL (CORREGIDO)
 
+
 function bis_generate_excel(){
 
     if(!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'],'bis_nonce')){
@@ -227,31 +228,48 @@ function bis_generate_excel(){
 
     require_once BIS_PATH.'exporter.php';
 
-    // 🔥 generar archivos base
     bis_generate_reports($data, count($data), $path);
 
     // =========================
-    // 🔥 NAMING PROFESIONAL
+    // 🔥 CONTEXTO DEL SCAN
     // =========================
 
     $domain = parse_url(home_url(), PHP_URL_HOST);
-    $date   = date('Y-m-d');
 
-    // TAG opcional
-    $tag = isset($_POST['tag']) ? sanitize_text_field($_POST['tag']) : '';
+    $year  = isset($_POST['year']) ? intval($_POST['year']) : '';
+    $month = isset($_POST['month']) ? intval($_POST['month']) : '';
+    $tag   = isset($_POST['tag']) ? sanitize_text_field($_POST['tag']) : '';
+
+    // 🔥 FORMATO DE FECHA INTELIGENTE
+    $date_part = '';
+
+    if(!empty($tag)){
+        // opcional: puedes dejar vacío o usar 'full'
+        $date_part = 'tag';
+    }
+    elseif(!empty($year) && !empty($month)){
+        $date_part = $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT);
+    }
+    elseif(!empty($year)){
+        $date_part = $year;
+    } else {
+        $date_part = date('Y-m'); // fallback
+    }
+
+    // 🔥 TAG EN NOMBRE
     $tag_part = !empty($tag) ? '_tag-'.$tag : '';
 
-    $broken_name  = "bis_broken_images_{$domain}{$tag_part}_{$date}.csv";
-    $timeout_name = "bis_timeout_images_{$domain}{$tag_part}_{$date}.csv";
+    // 🔥 NOMBRES
+    $broken_name  = "bis_broken_images_{$domain}{$tag_part}_{$date_part}.csv";
+    $timeout_name = "bis_timeout_images_{$domain}{$tag_part}_{$date_part}.csv";
 
-    // archivos originales (los que crea exporter.php)
+    // archivos originales
     $original_broken  = $path.'broken-images-report.csv';
     $original_timeout = $path.'timeout-images-report.csv';
 
     $final_broken  = $path.$broken_name;
     $final_timeout = $path.$timeout_name;
 
-    // 🔥 renombrar si existen
     if(file_exists($original_broken)){
         rename($original_broken, $final_broken);
     }
